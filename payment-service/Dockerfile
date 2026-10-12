@@ -1,0 +1,16 @@
+# ---- Build stage ----
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /build
+COPY pom.xml .
+RUN mvn -q dependency:go-offline
+COPY src ./src
+RUN mvn -q clean package -DskipTests
+
+# ---- Runtime stage ----
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+RUN useradd --system --no-create-home appuser
+COPY --from=build /build/target/payment-service-1.0.0.jar app.jar
+USER appuser
+EXPOSE 8081
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

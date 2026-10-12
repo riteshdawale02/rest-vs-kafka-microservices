@@ -1,0 +1,36 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: payment-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: paymentdb
+    ports:
+      - "3307:3306"   # host 3307 so it does not clash with the Order Service MySQL
+    volumes:
+      - payment-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  payment-service:
+    build: .
+    container_name: payment-service
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_URL: "jdbc:mysql://mysql:3306/paymentdb?useSSL=false&allowPublicKeyRetrieval=true"
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      SERVER_PORT: "8081"
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
+      LOGGING_LEVEL_COM_EXAMPLE: WARN
+
+    ports:
+      - "8081:8081"
+
+volumes:
+  payment-mysql-data:
