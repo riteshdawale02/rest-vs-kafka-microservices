@@ -3,9 +3,23 @@
 ```text
 microservices-research
 ├── docker-compose.yml        full environment (MySQL x2, Kafka, both services)
-├── order-service/
-└── payment-service/
+├── docker-compose.monitoring.yml  monitoring overlay (Prometheus, Grafana, cAdvisor)
+├── order-service/            Java 21 / Spring Boot 3.3.5 Order Service
+├── payment-service/          Java 21 / Spring Boot 3.3.5 Payment Service
+├── frontend/                 React 19 + Vite Interactive Platform (port 5174)
+├── loadtest/                 JMeter 5.6.3 test plans & PowerShell automation
+├── monitoring/               Prometheus configs & Grafana dashboards (port 3000)
+├── results/                  JMeter HTML reports & empirical CSV datasets
+├── RESEARCH_REPORT.md        Complete Academic Research Paper & Dissertation
+├── WORKING.md                Step-by-step Operations & Testing Runbook
+└── Roadmap.md                Research Milestones & Viva Defense Guide
 ```
+
+> **Quick Links:**
+> - 📄 **Academic Paper:** [RESEARCH_REPORT.md](RESEARCH_REPORT.md)
+> - 🛠️ **Operations Runbook:** [WORKING.md](WORKING.md)
+> - 🗺️ **Roadmap & Viva Prep:** [Roadmap.md](Roadmap.md)
+> - 🌐 **Interactive Dashboard:** `cd frontend; npm run dev` ➔ [http://localhost:5174/](http://localhost:5174/)
 
 One switch decides the communication mechanism: **`communication.mode=REST|KAFKA`** (env `COMMUNICATION_MODE`, default `REST`). Everything else (order logic, payment logic, databases, JVM settings) is identical.
 
