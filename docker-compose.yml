@@ -1,0 +1,132 @@
+# Full experiment environment.
+#
+#   REST experiment  : docker compose up -d --build
+#   Kafka experiment : COMMUNICATION_MODE=KAFKA docker compose --profile kafka up -d --build
+#
+# Kafka services are in the "kafka" profile, so the REST run has NO idle broker consuming CPU/RAM.
+# Requires Docker Compose v2.20.2+ (depends_on "required: false").
+# The per-service docker-compose.yml files inside order-service/ and payment-service/ are kept
+# but are superseded by this file for end-to-end runs.
+
+services:
+  order-mysql:
+    image: mysql:8.4
+    container_name: order-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: orderdb
+    ports:
+      - "3308:3306"
+    volumes:
+      - order-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  payment-mysql:
+    image: mysql:8.4
+    container_name: payment-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: paymentdb
+    ports:
+      - "3307:3306"
+    volumes:
+      - payment-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  kafka:
+    image: apache/kafka:3.8.1          # official image, single node, KRaft (no ZooKeeper)
+    container_name: kafka
+    profiles: ["kafka"]
+    ports:
+      - "9092:9092"                   # host access: localhost:9092
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://:9092,HOST://:29092,CONTROLLER://:9093
+      # containers use kafka:9092 ; programs on your machine use localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"   # topics are created explicitly (kafka-init)
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 20s
+
+  kafka-init:
+    image: apache/kafka:3.8.1
+    container_name: kafka-init
+    profiles: ["kafka"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists
+        --topic orders --partitions ${KAFKA_TOPIC_PARTITIONS:-3} --replication-factor 1
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    depends_on:
+      payment-mysql:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+        required: false
+    environment:
+      COMMUNICATION_MODE: ${COMMUNICATION_MODE:-REST}
+      DB_URL: "jdbc:mysql://payment-mysql:3306/paymentdb?useSSL=false&allowPublicKeyRetrieval=true"
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      SERVER_PORT: "8081"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_LISTENER_CONCURRENCY: ${KAFKA_LISTENER_CONCURRENCY:-3}
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
+    ports:
+      - "8081:8081"
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    depends_on:
+      order-mysql:
+        condition: service_healthy
+      payment-service:
+        condition: service_started
+      kafka-init:
+        condition: service_completed_successfully
+        required: false
+    environment:
+      COMMUNICATION_MODE: ${COMMUNICATION_MODE:-REST}
+      DB_URL: "jdbc:mysql://order-mysql:3306/orderdb?useSSL=false&allowPublicKeyRetrieval=true"
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      PAYMENT_SERVICE_URL: http://payment-service:8081
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC_PARTITIONS: ${KAFKA_TOPIC_PARTITIONS:-3}
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
+    ports:
+      - "8080:8080"
+
+volumes:
+  order-mysql-data:
+  payment-mysql-data:
