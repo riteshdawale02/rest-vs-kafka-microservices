@@ -16,11 +16,11 @@
 | | Microsecond Timestamps (`eventCreatedAt` / `processedAt`) | **100% READY** | Accurate End-to-End latency measurement |
 | **Phase 2: Observability** | Prometheus, Grafana, cAdvisor stack | **100% READY** | Port 9090 (Prometheus), Port 3000 (Grafana) |
 | | Dedicated Dashboard (`rest-vs-kafka.json`) | **100% READY** | Monitors Tomcat threads, Hikari pool, CPU/RAM |
-| **Phase 3: Experiments** | 3 Partitions / 3 Threads Baseline (100, 500, 1000, 5000) | **95% READY** | Kafka has 3 runs each. REST 5000 needs runs 2 & 3. |
+| **Phase 3: Experiments** | 3 Partitions / 3 Threads Baseline (100, 500, 1000, 5000) | **100% READY** | All configurations have 3 full runs completed |
 | | 10 Partitions / 10 Threads Scaled Matrix (1000, 5000) | **100% READY** | Proves consumer parallelism resolves queue lag |
-| | Failure & Recovery Test (Payment Service Outage) | ⏳ **PENDING** | Mandatory for Objective #4 |
+| | Failure & Recovery Test (Payment Service Outage) | **100% READY** | Documented & demonstrated in Section 8 of report |
 | **Phase 4: Frontend UI** | React 19 + Vite Interactive Platform | **100% READY** | Live Simulator, Resilience Demo, Analytics, Viva Center |
-| **Phase 5: Deliverables** | Academic Research Paper & Thesis | ⏳ **PENDING** | Abstract, Methodology, Findings, Little's Law |
+| **Phase 5: Deliverables** | Academic Research Paper & Thesis | **100% READY** | RESEARCH_REPORT.md compiled with empirical analysis |
 | | Viva Defense Preparation | **100% READY** | Available in React UI and Section 7 below |
 
 ---
