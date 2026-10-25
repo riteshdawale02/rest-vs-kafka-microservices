@@ -1,0 +1,17 @@
+# IDE & Editor files
+.idea/
+*.iml
+.vscode/
+
+# Build artifacts & dependencies
+target/
+dist/
+node_modules/
+
+# Logs
+*.log
+jmeter.log
+
+# Operating System files
+.DS_Store
+Thumbs.db
